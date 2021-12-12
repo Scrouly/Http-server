@@ -172,16 +172,25 @@ class HTTPServer(TCPServer):
     def handle_POST(self, request):
 
         new = request.uri.strip('/')
-
-        if not os.path.isdir(new):
+        content_type = mimetypes.guess_type(new)[0]
+        if os.path.exists(new):
+            response_line = self.response_line(404)
+            response_headers = self.response_headers()
+            response_body = b'<h1>404 File or directory already exists</h1>'
+        elif not os.path.isdir(new):
             os.mkdir(new)
             response_line = self.response_line(200)
             response_headers = self.response_headers()
             response_body = b'<h1>200 Directory was created</h1>'
         else:
-            response_line = self.response_line(404)
+            my_file = open(new, "a+")
+            my_file.write("new file")
+            my_file.close()
+            response_line = self.response_line(200)
             response_headers = self.response_headers()
-            response_body = b'<h1>404 This directory already exists</h1>'
+            response_body = b'<h1>200 Directory was created</h1>'
+
+
 
         blank_line = b'\r\n'
 
