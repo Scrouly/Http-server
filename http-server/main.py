@@ -2,7 +2,7 @@ import os
 import socket
 import mimetypes
 import shutil
-
+import datetime
 
 class TCPServer:
     def __init__(self, host='127.0.0.1', port=8888):
@@ -10,23 +10,23 @@ class TCPServer:
         self.port = port
 
     def start(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((self.host, self.port))
-        s.listen(5)
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind((self.host, self.port))
+        server.listen(5)
 
-        print("Listening at", s.getsockname())
+        print("Listening at", server.getsockname())
 
         while True:
-            conn, addr = s.accept()
+            client_socket, address = server.accept()
 
-            print("Connected by", addr)
+            print("Connected by", address)
 
-            data = conn.recv(1024)
+            data = client_socket.recv(1024)
             response = self.handle_request(data)
-            conn.sendall(response)
+            client_socket.sendall(response)
 
-            conn.close()
+            client_socket.close()
 
     def handle_request(self, data):
         return data
@@ -34,8 +34,10 @@ class TCPServer:
 
 class HTTPServer(TCPServer):
     headers = {
-        'Server': 'CrudeServer',
+        'Date': datetime.datetime.now(),
+        'Server': 'Coursework',
         'Content-Type': 'text/html',
+
     }
 
     status_codes = {
@@ -54,6 +56,7 @@ class HTTPServer(TCPServer):
 
         response = handler(request)
         return response
+
 
     def response_line(self, status_code):
 
@@ -108,9 +111,7 @@ class HTTPServer(TCPServer):
 
         blank_line = b'\r\n'
 
-        response = b''.join([response_line, response_headers, blank_line, response_body])
-
-        return response
+        return b''.join([response_line, response_headers, blank_line, response_body])
 
     def handle_DELETE(self, request):
 
@@ -172,24 +173,20 @@ class HTTPServer(TCPServer):
     def handle_POST(self, request):
 
         new = request.uri.strip('/')
-        content_type = mimetypes.guess_type(new)[0]
+
         if os.path.exists(new):
             response_line = self.response_line(404)
-            response_headers = self.response_headers()
             response_body = b'<h1>404 File or directory already exists</h1>'
-        elif not os.path.isdir(new):
-            os.mkdir(new)
-            response_line = self.response_line(200)
-            response_headers = self.response_headers()
-            response_body = b'<h1>200 Directory was created</h1>'
         else:
             my_file = open(new, "a+")
-            my_file.write("new file")
+            my_file.write("text")
             my_file.close()
             response_line = self.response_line(200)
-            response_headers = self.response_headers()
-            response_body = b'<h1>200 Directory was created</h1>'
+            response_body = b'<h1>200 File was created</h1>'
 
+        content_type = mimetypes.guess_type(new)[0] or 'text/html'
+        extra_headers = {'Content-Type': content_type}
+        response_headers = self.response_headers(extra_headers)
 
 
         blank_line = b'\r\n'
@@ -230,6 +227,7 @@ class HTTPRequest:
 
         if len(words) > 2:
             self.http_version = words[2]
+
 
 
 if __name__ == '__main__':
