@@ -42,7 +42,9 @@ class HTTPServer(TCPServer):
 
     status_codes = {
         200: 'OK',
+        201: 'Created',
         404: 'Not Found',
+        409: 'Conflict',
         501: 'Not Implemented',
     }
 
@@ -175,14 +177,14 @@ class HTTPServer(TCPServer):
         new = request.uri.strip('/')
 
         if os.path.exists(new):
-            response_line = self.response_line(404)
-            response_body = b'<h1>404 File or directory already exists</h1>'
+            response_line = self.response_line(409)
+            response_body = b'<h1>409 File already exist</h1>'
         else:
             my_file = open(new, "a+")
             my_file.write("text")
             my_file.close()
-            response_line = self.response_line(200)
-            response_body = b'<h1>200 File was created</h1>'
+            response_line = self.response_line(201)
+            response_body = b'<h1>201 File was created</h1>'
 
         content_type = mimetypes.guess_type(new)[0] or 'text/html'
         extra_headers = {'Content-Type': content_type}
